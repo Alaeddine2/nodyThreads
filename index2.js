@@ -3,14 +3,21 @@ const fs = require('fs');
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
+const server = require('http').createServer(app)
+const path = require('path')
 
 var connectedUsers = [];
 var connectedUsersPid = [];
 
+app.use(express.static(path.join(__dirname, 'public')))
+app.set('views', path.join(__dirname, 'views'))
+app.set('view engine', 'ejs')
+
 if (cluster.isMaster) {
 
     app.get('/', (req, res) => {
-        res.send('Create the parent thread Pid: ' + process.pid);
+        //res.send('Create the parent thread Pid: ' + process.pid);
+        res.render('index', {pid: process.pid})
     });
 
     // Endpoint to create new worker threads
@@ -32,6 +39,10 @@ if (cluster.isMaster) {
                     connectedUsersPid.splice(indexOfPid, 1);
                 }
                 console.log(connectedUsersPid);
+            }
+            if(message.type === 'cmd'){
+                console.log(`Master received message from worker: ${message.content}`);
+                
             }
         })
     });
@@ -83,7 +94,7 @@ if (cluster.isMaster) {
                     const lines = data.trim().split('\n');
                     console.log(`Worker ${cluster.worker.id} file content: ${lines}`);
 
-                    process.send({ type: 'file_changed', content: 'hi' });
+                    process.send({ type: 'cmd', content: lines[lines.length - 1] });
                 }
 
             });
